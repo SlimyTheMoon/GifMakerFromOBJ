@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Asset Scanner</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gif.js.optimized@1.0.1/dist/gif.js"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-200 p-6 font-sans">
+    
+    <div class="max-w-4xl mx-auto space-y-6">
+        <!-- Header -->
+        <div class="border-b border-opacity-30 pb-4 flex items-center justify-between" id="header-border">
+            <div class="flex items-center gap-4">
+                <svg id="header-icon" class="w-8 h-8 animate-pulse" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-widest font-mono" id="header-title">3D ASSET SCANNER</h1>
+                    <p class="text-xs font-mono tracking-wide" id="header-subtitle">MODERNIZING MESH DATALOOP</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <!-- Live Preview Monitor -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-2xl flex flex-col">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-sm font-semibold flex items-center gap-2 text-slate-400 font-mono">
+                        <svg class="w-4 h-4" id="monitor-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                        LIVE FILTER PREVIEW
+                    </h2>
+                    <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded flex items-center gap-2 transition-colors border border-slate-700 text-slate-300 font-mono" id="upload-btn">
+                        <svg class="w-3 h-3" id="box-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                        UPLOAD .OBJ
+                        <input type="file" id="fileInput" class="hidden" accept=".obj" />
+                    </label>
+                </div>
+                <div class="flex-1 bg-black rounded border overflow-hidden relative flex items-center justify-center min-h-[300px]" id="canvas-container">
+                    <canvas id="mainCanvas" class="w-full h-full object-contain relative z-10"></canvas>
+                    <div id="loadingOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-black/80 font-mono text-sm z-20">
+                        <svg class="w-6 h-6 animate-spin mb-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                        INITIALIZING ENGINES...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls & Output Panel -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-2xl flex flex-col justify-center space-y-6">
+                
+                <!-- NEW GUI CONTROLS -->
+                <div class="space-y-4 mb-2 pb-6 border-b border-slate-800">
+                    <h3 class="text-sm font-semibold font-mono flex items-center gap-2" id="gui-title">
+                        <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        SCANNER SETTINGS
+                    </h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-12 gap-x-4 gap-y-3">
+                        <div class="sm:col-span-4">
+                            <label class="block text-[10px] text-slate-500 font-mono mb-1">LABEL 1</label>
+                            <input type="text" id="input-label-trgt" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-slate-500 transition-colors">
+                        </div>
+                        <div class="sm:col-span-8">
+                            <label class="block text-[10px] text-slate-500 font-mono mb-1">VALUE 1</label>
+                            <input type="text" id="input-trgt" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-slate-500 transition-colors">
+                        </div>
+                        <div class="sm:col-span-4">
+                            <label class="block text-[10px] text-slate-500 font-mono mb-1">LABEL 2</label>
+                            <input type="text" id="input-label-stat" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-slate-500 transition-colors">
+                        </div>
+                        <div class="sm:col-span-8">
+                            <label class="block text-[10px] text-slate-500 font-mono mb-1">VALUE 2</label>
+                            <input type="text" id="input-stat" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-slate-500 transition-colors">
+                        </div>
+                        
+                        <div class="sm:col-span-6 flex items-center justify-between bg-slate-950 border border-slate-700 rounded px-3 py-1.5">
+                            <label class="text-[10px] text-slate-500 font-mono">THEME COLOR</label>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] font-mono text-slate-400" id="color-hex-display"></span>
+                                <input type="color" id="input-color" class="w-6 h-6 bg-transparent cursor-pointer rounded-full border-none">
+                            </div>
+                        </div>
+                        <div class="sm:col-span-6 flex items-center justify-between bg-slate-950 border border-slate-700 rounded px-3 py-1.5">
+                            <label class="text-[10px] text-slate-500 font-mono">BG COLOR</label>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] font-mono text-slate-400" id="bg-color-hex-display"></span>
+                                <input type="color" id="input-bg-color" class="w-6 h-6 bg-transparent cursor-pointer rounded-full border-none">
+                            </div>
+                        </div>
+
+                        <div class="sm:col-span-6">
+                            <label class="flex justify-between text-[10px] text-slate-500 font-mono mb-1"><span>DURATION</span><span id="val-duration">6s</span></label>
+                            <input type="range" id="input-duration" min="2" max="15" step="1" class="w-full theme-accent cursor-pointer">
+                        </div>
+                        <div class="sm:col-span-6">
+                            <label class="flex justify-between text-[10px] text-slate-500 font-mono mb-1"><span>SCALE</span><span id="val-scale">1.0x</span></label>
+                            <input type="range" id="input-scale" min="0.2" max="3" step="0.1" class="w-full theme-accent cursor-pointer">
+                        </div>
+                        <div class="sm:col-span-4">
+                            <label class="flex justify-between text-[10px] text-slate-500 font-mono mb-1"><span>GLOW</span><span id="val-glow">6</span></label>
+                            <input type="range" id="input-glow" min="0" max="20" step="1" class="w-full theme-accent cursor-pointer">
+                        </div>
+                        <div class="sm:col-span-4">
+                            <label class="flex justify-between text-[10px] text-slate-500 font-mono mb-1"><span>GRID OPACITY</span><span id="val-grid">0.05</span></label>
+                            <input type="range" id="input-grid" min="0" max="0.5" step="0.01" class="w-full theme-accent cursor-pointer">
+                        </div>
+                        <div class="sm:col-span-4">
+                            <label class="flex justify-between text-[10px] text-slate-500 font-mono mb-1"><span>SCANLINES</span><span id="val-scanlines">0.4</span></label>
+                            <input type="range" id="input-scanlines" min="0" max="1" step="0.1" class="w-full theme-accent cursor-pointer">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <h3 class="text-lg font-mono" id="encoding-title">ENCODING PROTOCOL</h3>
+                    <p class="text-sm text-slate-400">
+                        This process captures the active WebGL render frame-by-frame and compiles it into a new, self-contained GIF format file suitable for technological analysis reports.
+                    </p>
+                </div>
+
+                <div id="errorBox" class="hidden text-red-400 text-xs flex items-center gap-2 bg-red-950/30 p-3 rounded border border-red-900/50 font-mono">
+                    <svg class="w-4 h-4 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    <span id="errorText"></span>
+                </div>
+
+                <button id="generateBtn" class="w-full py-4 bg-slate-800 text-white rounded transition-all flex items-center justify-center gap-3 font-mono uppercase tracking-widest border border-transparent disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg id="generateIcon" class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                    <span id="generateBtnText">Generate Modernized GIF</span>
+                </button>
+
+                <!-- Progress Bar -->
+                <div id="progressContainer" class="hidden w-full bg-slate-950 h-2 rounded overflow-hidden border border-slate-800">
+                    <div id="progressBar" class="h-full transition-all duration-200 ease-out" style="width: 0%"></div>
+                </div>
+
+                <!-- Download Output -->
+                <div id="downloadContainer" class="hidden pt-4 border-t border-slate-800 fade-in duration-300">
+                    <a id="downloadLink" href="#" download="3D_Tech_Analysis.gif" class="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded font-bold tracking-widest transition-all flex items-center justify-center gap-3 font-mono shadow-lg shadow-emerald-900/20">
+                        <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        DOWNLOAD FINAL GIF
+                    </a>
+                    <p class="text-center text-xs text-emerald-500 mt-2 font-mono">
+                        RENDER COMPLETE. READY FOR EXTRACTION.
+                    </p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==============================================================================
+        // ⚙️ EASY EDITABLE CONFIGURATION VARIABLES ⚙️
+        // Change these values to instantly customize the terminal!
+        // ==============================================================================
+        const CONFIG = {
+            GIF_DURATION_SECONDS: 6,           // How long the output GIF will be (in seconds)
+            THEME_COLOR_HEX: "#ff8800",        // Color of the wireframe and HUD (Hex format)
+            BG_COLOR_HEX: "#050505",           // Background Color
+            LABEL_TRGT: "TRGT",                // Target Label
+            TEXT_TRGT: "Proyecto: Dulce Recuerdo", // Target Value
+            LABEL_STAT: "STAT",                // Status Label
+            TEXT_STAT: "ANALYSIS [ACTIVE]",    // Status Value
+            MODEL_SCALE: 1.0,                  // 3D Model Scale multiplier
+            GLOW_INTENSITY: 6,                 // Wireframe bloom intensity
+            GRID_OPACITY: 0.05,                // Opacity of the background grid
+            SCANLINE_OPACITY: 0.4              // Opacity of CRT scanlines
+        };
+        // ==============================================================================
+
+        // --- Helper to parse Hex color into RGB format for Canvas processing ---
+        const hexToRgb = (hex) => {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : "255, 136, 0";
+        };
+        
+        let rgbColor = hexToRgb(CONFIG.THEME_COLOR_HEX);
+
+        // --- Global State ---
+        let objText = '';
+        let isRecording = false;
+        let recordFrame = 0;
+        let totalRecordFrames = CONFIG.GIF_DURATION_SECONDS * 20; // 20 FPS
+        let isReady = false;
+        let pivot, renderer, scene, camera, overlayCanvas, threeCanvas, ctx, animationId, wireMaterial;
+
+        // --- Setup DOM Elements ---
+        const fileInput = document.getElementById('fileInput');
+        const mainCanvas = document.getElementById('mainCanvas');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const errorBox = document.getElementById('errorBox');
+        const errorText = document.getElementById('errorText');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const downloadContainer = document.getElementById('downloadContainer');
+        const downloadLink = document.getElementById('downloadLink');
+        const generateBtnText = document.getElementById('generateBtnText');
+        const generateIcon = document.getElementById('generateIcon');
+        const generateBtn = document.getElementById('generateBtn');
+
+        // GUI Inputs
+        const inputLabelTrgt = document.getElementById('input-label-trgt');
+        const inputTrgt = document.getElementById('input-trgt');
+        const inputLabelStat = document.getElementById('input-label-stat');
+        const inputStat = document.getElementById('input-stat');
+        const inputColor = document.getElementById('input-color');
+        const colorHexDisplay = document.getElementById('color-hex-display');
+        
+        const inputBgColor = document.getElementById('input-bg-color');
+        const bgColorHexDisplay = document.getElementById('bg-color-hex-display');
+        const inputDuration = document.getElementById('input-duration');
+        const inputScale = document.getElementById('input-scale');
+        const inputGlow = document.getElementById('input-glow');
+        const inputGrid = document.getElementById('input-grid');
+        const inputScanlines = document.getElementById('input-scanlines');
+
+        const valDuration = document.getElementById('val-duration');
+        const valScale = document.getElementById('val-scale');
+        const valGlow = document.getElementById('val-glow');
+        const valGrid = document.getElementById('val-grid');
+        const valScanlines = document.getElementById('val-scanlines');
+
+        // --- Initialize GUI Values ---
+        inputLabelTrgt.value = CONFIG.LABEL_TRGT;
+        inputTrgt.value = CONFIG.TEXT_TRGT;
+        inputLabelStat.value = CONFIG.LABEL_STAT;
+        inputStat.value = CONFIG.TEXT_STAT;
+        
+        inputColor.value = CONFIG.THEME_COLOR_HEX;
+        colorHexDisplay.textContent = CONFIG.THEME_COLOR_HEX.toUpperCase();
+        
+        inputBgColor.value = CONFIG.BG_COLOR_HEX;
+        bgColorHexDisplay.textContent = CONFIG.BG_COLOR_HEX.toUpperCase();
+        
+        inputDuration.value = CONFIG.GIF_DURATION_SECONDS;
+        valDuration.textContent = CONFIG.GIF_DURATION_SECONDS + 's';
+        
+        inputScale.value = CONFIG.MODEL_SCALE;
+        valScale.textContent = CONFIG.MODEL_SCALE.toFixed(1) + 'x';
+        
+        inputGlow.value = CONFIG.GLOW_INTENSITY;
+        valGlow.textContent = CONFIG.GLOW_INTENSITY;
+        
+        inputGrid.value = CONFIG.GRID_OPACITY;
+        valGrid.textContent = CONFIG.GRID_OPACITY.toFixed(2);
+        
+        inputScanlines.value = CONFIG.SCANLINE_OPACITY;
+        valScanlines.textContent = CONFIG.SCANLINE_OPACITY.toFixed(1);
+
+        // --- Apply Theme Colors to UI ---
+        function updateTheme() {
+            rgbColor = hexToRgb(CONFIG.THEME_COLOR_HEX);
+            
+            document.getElementById('header-border').style.borderColor = `rgba(${rgbColor}, 0.3)`;
+            document.getElementById('header-icon').style.color = CONFIG.THEME_COLOR_HEX;
+            document.getElementById('header-title').style.color = CONFIG.THEME_COLOR_HEX;
+            document.getElementById('header-subtitle').style.color = `rgba(${rgbColor}, 0.6)`;
+            document.getElementById('monitor-icon').style.color = CONFIG.THEME_COLOR_HEX;
+            document.getElementById('box-icon').style.color = CONFIG.THEME_COLOR_HEX;
+            document.getElementById('canvas-container').style.borderColor = `rgba(${rgbColor}, 0.3)`;
+            document.getElementById('loadingOverlay').style.color = `rgba(${rgbColor}, 0.8)`;
+            document.getElementById('encoding-title').style.color = CONFIG.THEME_COLOR_HEX;
+            document.getElementById('progressBar').style.backgroundColor = CONFIG.THEME_COLOR_HEX;
+            document.getElementById('gui-title').style.color = CONFIG.THEME_COLOR_HEX;
+            
+            generateBtn.style.backgroundColor = `rgba(${rgbColor}, 0.1)`;
+            generateBtn.style.color = `rgba(${rgbColor}, 1)`;
+            generateBtn.style.borderColor = `rgba(${rgbColor}, 0.5)`;
+            
+            // Adjust slider thumb colors to match theme
+            document.querySelectorAll('.theme-accent').forEach(el => el.style.accentColor = CONFIG.THEME_COLOR_HEX);
+
+            if (wireMaterial) {
+                wireMaterial.color.setHex(parseInt(CONFIG.THEME_COLOR_HEX.replace('#', '0x')));
+            }
+            if (overlayCanvas) {
+                drawOverlayCanvas();
+            }
+        }
+
+        // --- Input Event Listeners ---
+        inputLabelTrgt.addEventListener('input', (e) => { CONFIG.LABEL_TRGT = e.target.value || " "; });
+        inputTrgt.addEventListener('input', (e) => { CONFIG.TEXT_TRGT = e.target.value; });
+        inputLabelStat.addEventListener('input', (e) => { CONFIG.LABEL_STAT = e.target.value || " "; });
+        inputStat.addEventListener('input', (e) => { CONFIG.TEXT_STAT = e.target.value; });
+        
+        inputColor.addEventListener('input', (e) => {
+            CONFIG.THEME_COLOR_HEX = e.target.value;
+            colorHexDisplay.textContent = CONFIG.THEME_COLOR_HEX.toUpperCase();
+            updateTheme();
+        });
+        
+        inputBgColor.addEventListener('input', (e) => {
+            CONFIG.BG_COLOR_HEX = e.target.value;
+            bgColorHexDisplay.textContent = CONFIG.BG_COLOR_HEX.toUpperCase();
+        });
+
+        inputDuration.addEventListener('input', (e) => {
+            CONFIG.GIF_DURATION_SECONDS = parseInt(e.target.value);
+            valDuration.textContent = CONFIG.GIF_DURATION_SECONDS + 's';
+            totalRecordFrames = CONFIG.GIF_DURATION_SECONDS * 20;
+        });
+
+        inputScale.addEventListener('input', (e) => {
+            CONFIG.MODEL_SCALE = parseFloat(e.target.value);
+            valScale.textContent = CONFIG.MODEL_SCALE.toFixed(1) + 'x';
+            if (pivot) pivot.scale.set(CONFIG.MODEL_SCALE, CONFIG.MODEL_SCALE, CONFIG.MODEL_SCALE);
+        });
+
+        inputGlow.addEventListener('input', (e) => {
+            CONFIG.GLOW_INTENSITY = parseInt(e.target.value);
+            valGlow.textContent = CONFIG.GLOW_INTENSITY;
+        });
+
+        inputGrid.addEventListener('input', (e) => {
+            CONFIG.GRID_OPACITY = parseFloat(e.target.value);
+            valGrid.textContent = CONFIG.GRID_OPACITY.toFixed(2);
+            if (overlayCanvas) drawOverlayCanvas();
+        });
+
+        inputScanlines.addEventListener('input', (e) => {
+            CONFIG.SCANLINE_OPACITY = parseFloat(e.target.value);
+            valScanlines.textContent = CONFIG.SCANLINE_OPACITY.toFixed(1);
+            if (overlayCanvas) drawOverlayCanvas();
+        });
+
+        function showError(msg) {
+            errorBox.classList.remove('hidden');
+            errorText.textContent = msg;
+        }
+        function hideError() {
+            errorBox.classList.add('hidden');
+        }
+
+        // --- Engine Initialization ---
+        window.addEventListener('load', () => {
+            initEngines();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                objText = event.target.result;
+                hideError();
+                downloadContainer.classList.add('hidden');
+                initScene(); // Re-init with new object
+            };
+            reader.onerror = () => showError("Failed to read the .obj file.");
+            reader.readAsText(file);
+        });
+
+        function initEngines() {
+            // Check if libraries loaded correctly
+            if (!window.THREE || !window.GIF) {
+                showError("Libraries failed to load. Are you connected to the internet?");
+                return;
+            }
+            updateTheme(); // Apply initial colors
+            initScene();
+        }
+
+        function drawOverlayCanvas() {
+            const width = overlayCanvas.width;
+            const height = overlayCanvas.height;
+            const oCtx = overlayCanvas.getContext('2d');
+            
+            oCtx.clearRect(0, 0, width, height);
+
+            // Scanlines
+            oCtx.fillStyle = `rgba(0, 0, 0, ${CONFIG.SCANLINE_OPACITY})`;
+            for (let i = 0; i < height; i += 4) { oCtx.fillRect(0, i, width, 2); }
+            // Grid
+            oCtx.strokeStyle = `rgba(${rgbColor}, ${CONFIG.GRID_OPACITY})`;
+            oCtx.lineWidth = 1;
+            oCtx.beginPath();
+            for(let x = 0; x < width; x += 40) { oCtx.moveTo(x, 0); oCtx.lineTo(x, height); }
+            for(let y = 0; y < height; y += 40) { oCtx.moveTo(0, y); oCtx.lineTo(width, y); }
+            oCtx.stroke();
+            // Vignette
+            const cx = width / 2;
+            const cy = height / 2;
+            const gradient = oCtx.createRadialGradient(cx, cy, 100, cx, cy, width / 1.2);
+            gradient.addColorStop(0, 'rgba(0,0,0,0)');
+            gradient.addColorStop(1, 'rgba(0,0,0,0.85)');
+            oCtx.fillStyle = gradient;
+            oCtx.fillRect(0, 0, width, height);
+        }
+
+        function initScene() {
+            if (animationId) cancelAnimationFrame(animationId);
+
+            const width = 600;
+            const height = 400;
+            mainCanvas.width = width;
+            mainCanvas.height = height;
+            ctx = mainCanvas.getContext('2d', { willReadFrequently: true });
+
+            // --- OFFSCREEN OVERLAY GENERATION ---
+            overlayCanvas = document.createElement('canvas');
+            overlayCanvas.width = width;
+            overlayCanvas.height = height;
+            drawOverlayCanvas();
+
+            // --- THREE.JS 3D SCENE SETUP ---
+            threeCanvas = document.createElement('canvas');
+            threeCanvas.width = width;
+            threeCanvas.height = height;
+            
+            scene = new window.THREE.Scene();
+            camera = new window.THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+            camera.position.z = 10;
+            
+            renderer = new window.THREE.WebGLRenderer({ canvas: threeCanvas, alpha: true, antialias: true });
+            renderer.setSize(width, height);
+
+            pivot = new window.THREE.Group();
+            pivot.scale.set(CONFIG.MODEL_SCALE, CONFIG.MODEL_SCALE, CONFIG.MODEL_SCALE);
+            scene.add(pivot);
+
+            wireMaterial = new window.THREE.MeshBasicMaterial({ 
+                color: parseInt(CONFIG.THEME_COLOR_HEX.replace('#', '0x')), 
+                wireframe: true,
+                transparent: true,
+                opacity: 0.8
+            });
+
+            try {
+                if (objText) {
+                    const loader = new window.THREE.OBJLoader();
+                    const object = loader.parse(objText);
+                    
+                    const box = new window.THREE.Box3().setFromObject(object);
+                    const center = box.getCenter(new window.THREE.Vector3());
+                    const size = box.getSize(new window.THREE.Vector3());
+                    const maxDim = Math.max(size.x, size.y, size.z);
+                    const scale = 6 / maxDim; 
+                    
+                    object.scale.set(scale, scale, scale);
+                    object.position.set(-center.x * scale, -center.y * scale, -center.z * scale);
+
+                    object.traverse((child) => {
+                        if (child.isMesh) child.material = wireMaterial;
+                    });
+                    pivot.add(object);
+                } else {
+                    const geometry = new window.THREE.TorusKnotGeometry(2.5, 0.6, 100, 16);
+                    const torus = new window.THREE.Mesh(geometry, wireMaterial);
+                    pivot.add(torus);
+                }
+            } catch (e) {
+                console.error(e);
+                showError("Error parsing .obj file. File may be corrupted.");
+            }
+
+            loadingOverlay.classList.add('hidden');
+            isReady = true;
+            generateBtn.disabled = false;
+            drawLoop();
+        }
+
+        function drawLoop() {
+            if (!isReady) return;
+
+            // Perfect Rotation Logic
+            if (isRecording) {
+                const fraction = recordFrame / totalRecordFrames;
+                pivot.rotation.y = fraction * Math.PI * 2;
+            } else {
+                // Live preview rotation speed scaled by config duration
+                pivot.rotation.y += (Math.PI * 2) / (CONFIG.GIF_DURATION_SECONDS * 60); 
+            }
+            
+            renderer.render(scene, camera);
+
+            // 1. Clear background
+            ctx.fillStyle = CONFIG.BG_COLOR_HEX; 
+            ctx.fillRect(0, 0, mainCanvas.width, mainCanvas.height);
+            
+            // 2. Draw 3D canvas with dynamic bloom
+            if (CONFIG.GLOW_INTENSITY > 0) {
+                const innerGlow = Math.max(1, CONFIG.GLOW_INTENSITY / 3);
+                ctx.filter = `drop-shadow(0 0 ${CONFIG.GLOW_INTENSITY}px rgba(${rgbColor},0.5)) drop-shadow(0 0 ${innerGlow}px rgba(${rgbColor},1))`;
+            } else {
+                ctx.filter = 'none';
+            }
+            ctx.drawImage(threeCanvas, 0, 0);
+            ctx.filter = 'none';
+
+            // 3. Draw static overlay
+            ctx.drawImage(overlayCanvas, 0, 0);
+
+            // 4. Draw dynamic HUD Elements
+            ctx.fillStyle = `rgba(${rgbColor}, 0.8)`;
+            ctx.font = 'bold 14px monospace';
+            
+            // Auto-align colons based on the longest label string
+            const labels = ["SYS.T", CONFIG.LABEL_TRGT, CONFIG.LABEL_STAT];
+            const maxLen = Math.max(...labels.map(l => l.length));
+            
+            ctx.fillText(`${"SYS.T".padEnd(maxLen, ' ')} : ${Date.now().toString().slice(-6)}`, 20, 30);
+            ctx.fillText(`${CONFIG.LABEL_TRGT.padEnd(maxLen, ' ')} : ${CONFIG.TEXT_TRGT}`, 20, 50);
+            ctx.fillText(`${CONFIG.LABEL_STAT.padEnd(maxLen, ' ')} : ${CONFIG.TEXT_STAT}`, 20, 70);
+
+            ctx.font = '12px monospace';
+            ctx.textAlign = 'right';
+            for(let i=0; i<5; i++) {
+                const hex = Math.floor(Math.random()*16777215).toString(16).toUpperCase().padStart(6, '0');
+                ctx.fillText(`0x${hex}`, mainCanvas.width - 20, 30 + (i * 20));
+            }
+            ctx.textAlign = 'left';
+
+            // Center Crosshair
+            const cx = mainCanvas.width / 2;
+            const cy = mainCanvas.height / 2;
+            ctx.strokeStyle = `rgba(${rgbColor}, 0.4)`;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 150, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(cx - 20, cy); ctx.lineTo(cx + 20, cy);
+            ctx.moveTo(cx, cy - 20); ctx.lineTo(cx, cy + 20);
+            ctx.stroke();
+
+            animationId = requestAnimationFrame(drawLoop);
+        }
+
+        // --- GIF Generation ---
+        generateBtn.addEventListener('click', async () => {
+            if (!isReady || isRecording) return;
+            
+            isRecording = true;
+            generateBtn.disabled = true;
+            generateBtnText.textContent = "ENCODING...";
+            progressContainer.classList.remove('hidden');
+            progressBar.style.width = '0%';
+            hideError();
+            downloadContainer.classList.add('hidden');
+
+            try {
+                // Fetch the worker to avoid local file:// CORS issues when possible
+                const workerRes = await fetch('https://cdn.jsdelivr.net/npm/gif.js.optimized@1.0.1/dist/gif.worker.js');
+                const workerText = await workerRes.text();
+                const workerBlob = new Blob([workerText], { type: 'application/javascript' });
+                const workerUrl = URL.createObjectURL(workerBlob);
+
+                const gif = new window.GIF({
+                    workers: 2,
+                    quality: 10,
+                    width: mainCanvas.width,
+                    height: mainCanvas.height,
+                    workerScript: workerUrl
+                });
+
+                const captureDelayMs = 50; // 20 FPS (1000 / 50 = 20)
+
+                const captureFrames = async () => {
+                    for (let i = 0; i < totalRecordFrames; i++) {
+                        recordFrame = i;
+                        
+                        await new Promise(resolve => requestAnimationFrame(resolve));
+                        await new Promise(resolve => setTimeout(resolve, 5));
+                        
+                        gif.addFrame(mainCanvas, { copy: true, delay: captureDelayMs });
+                        progressBar.style.width = `${((i + 1) / totalRecordFrames) * 50}%`;
+                    }
+                    
+                    isRecording = false;
+
+                    gif.on('progress', p => {
+                        progressBar.style.width = `${50 + (p * 50)}%`;
+                    });
+
+                    gif.on('finished', blob => {
+                        const url = URL.createObjectURL(blob);
+                        downloadLink.href = url;
+                        downloadContainer.classList.remove('hidden');
+                        generateBtn.disabled = false;
+                        generateBtnText.textContent = "Generate Modernized GIF";
+                        progressContainer.classList.add('hidden');
+                    });
+
+                    gif.render();
+                };
+
+                captureFrames();
+
+            } catch (err) {
+                console.error(err);
+                showError("Failed to initialize GIF rendering. Try running this file via a local server (e.g. VSCode Live Server) if you get permission errors.");
+                isRecording = false;
+                generateBtn.disabled = false;
+                generateBtnText.textContent = "Generate Modernized GIF";
+                progressContainer.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
